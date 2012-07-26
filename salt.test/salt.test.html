@@ -1,0 +1,38 @@
+<html>
+<head>
+    <link rel="stylesheet" href="../qunit/qunit.css">
+    <script type="text/javascript" src="../qunit/qunit.js"></script>
+    
+    <script type="text/javascript" src="../js/require-jquery.js"></script>
+    <script>
+        requirejs.config({
+            baseUrl: '../salt'
+            , urlArgs: 'version='  + (new Date()).getTime()
+            , paths: {
+                'salt.test': '../salt.test'
+            }
+            
+        });
+
+        requirejs(['jquery'
+                   , 'salt'
+                   , 'salt.test/salt.model.test'
+                   , 'salt.test/salt.event.test'
+                   ],
+            function($, salt) {
+                console.log('we are here');
+                console.log(salt);
+            });
+
+    </script>
+    
+    
+</head>
+<body>
+    <div id="qunit">
+    </div>
+    <div id="qunit-fixture">
+    </div>
+    
+</body>
+</html>
