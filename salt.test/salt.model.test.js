@@ -181,7 +181,7 @@ require(['salt.model'], function(salt, undefined) {
         equal(source[2], 9);
     });
 
-    test("changed items triggers changed event on the array", function() {
+    test("changed items trigger changed event on the array", function() {
         var item = new salt.Data();
         var source = new salt.Array([item]);
 
@@ -193,6 +193,25 @@ require(['salt.model'], function(salt, undefined) {
         item.update({ a: 4 });
 
         equal(receivedValue, source);
+    });
+
+
+    test("removed items do not trigger changed event on the array any more", function() {
+        var item1 = new salt.Data();
+        var item2 = new salt.Data();
+        var source = new salt.Array([item1, item2]);
+
+        var receivedValue;
+        function method(value) { receivedValue = value; };
+        source.bind({ event: 'changed', method: method, trigger: false });
+        equal(receivedValue, undefined);
+
+        source.remove(item1);
+        equal(source.length, 1);
+        
+        item1.update({ a: 4 });
+
+        equal(receivedValue, undefined);
     });
 
 

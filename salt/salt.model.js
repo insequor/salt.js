@@ -71,23 +71,23 @@ define(['salt.base', 'salt.event'], function(salt) {
     };
     salt.inherit(salt.Array, Array);
 
-
-
     salt.Array.prototype.push = function(item) {
         Array.prototype.push.call(this, item);
         if (item.bind) {
             var _this = this;
-            var saltItemChangedHandler = function(value) {
-                _this.trigger('changed', _this);
-            }
-
-            item.bind({ event: 'changed', method: saltItemChangedHandler });
+            //TODO: Once the event mechanism support method owner we can 
+            //remove this hack
+            if (!this.saltItemChangedHandler)
+                this.saltItemChangedHandler = function(value) {_this.trigger('changed', _this);}
+            item.bind({ event: 'changed', method: this.saltItemChangedHandler });
         }
         this.trigger('added', item);
     }
 
     salt.Array.prototype.remove = function(item) {
         var res = salt.model.remove(this, item);
+        if (item.bind)
+            item.unbind('changed', this.saltItemChangedHandler);
         if (res[0])
             this.trigger('removed', item);
     }
