@@ -2,7 +2,7 @@
 <head>
     <link rel="stylesheet" href="../qunit/qunit.css">
     <script type="text/javascript" src="../qunit/qunit.js"></script>
-    
+    <script type="text/javascript" src="../js/jquery.js"></script>
     <script type="text/javascript" src="../js/require-jquery.js"></script>
     <script>
         requirejs.config({
@@ -14,13 +14,12 @@
             
         });
 
-        requirejs(['jquery'
-                   , 'salt'
+        requirejs(['salt'
                    , 'salt.test/salt.model.test'
                    , 'salt.test/salt.event.test'
                    , 'salt.test/salt.view.test'
                    ],
-            function($, salt) {
+            function(salt) {
                 console.log('we are here');
                 console.log(salt);
             });
