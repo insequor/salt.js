@@ -144,7 +144,7 @@ define(['salt.base', 'salt.event', 'salt.model'], function(salt) {
     point
     *
     */
-    salt.view.View = function(element) {
+    salt.View = function(element) {
 
         element = $(element);
 

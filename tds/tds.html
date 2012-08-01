@@ -1,0 +1,55 @@
+<html>
+<head>
+    <title>salt - ToDo Session</title>
+    <script type="text/javascript" src="../js/jquery.js"></script>
+    <script type="text/javascript" src="../js/require-jquery.js"></script>
+    <script>
+        //global session object which needs to be configured when the modules are loaded
+        var session = {};
+        
+        requirejs.config({
+            baseUrl: '../salt'
+            , urlArgs: 'version='  + (new Date()).getTime()
+            , paths: {
+            }
+        });
+
+        requirejs(['salt', '../tds/tds'],
+            function(salt, tds) {
+                //TODO: We can do the intialization here which is simple trigger the root level
+                //view items. tds can provide custom View objects. However these are not
+                //global and we need to make sure that we can use the custom viewers from tds
+                session.name = 'Name of the session';
+                session.items = new salt.Array();
+
+                $.each(salt.view.saltyElements(document), function(idx, element) {
+                    new salt.View(element);
+                });
+            });
+    </script>
+    
+    
+</head>
+<body>
+    <div id="session">
+        <div id="session.header" salt="source:session">
+            session.header
+            {{record.name}}
+        </div>
+        <div id="session.now" salt="source:session">
+            session.now
+            <div><span>Start/Stop</span><span>New</span></div>
+        </div>
+        <div id="session.todo" salt="source:session.items">
+            session.todo:
+            {{record.length}}
+            <div class="item todo">todo item</div>
+        </div>
+        <div id="session.done" salt="source:session.items">
+            session.done:
+            {{record.length}}
+            <div class="item done">done item</div>
+        </div>
+    </div>
+</body>
+</html>

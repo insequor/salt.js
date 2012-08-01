@@ -112,7 +112,7 @@ require(['salt.view'], function(salt, undefined) {
 
     //View object
     test("View object can be instantiated", function() {
-        var view = new salt.view.View();
+        var view = new salt.View();
         deepEqual(view.element, undefined);
         deepEqual(view.source, undefined);
         deepEqual(view.template, undefined);
@@ -120,7 +120,7 @@ require(['salt.view'], function(salt, undefined) {
 
     test("View object does not modify a normal element", function() {
         var text = '<div>this is a normal div element</div>';
-        var view = new salt.view.View(text);
+        var view = new salt.View(text);
         deepEqual(view.element.outerHTML, text);
         deepEqual(view.source, undefined);
         deepEqual(view.template, undefined);
@@ -128,20 +128,20 @@ require(['salt.view'], function(salt, undefined) {
 
     test("View object constructs the template if there is at least one template value", function() {
         var text = '<div>Name = {{"ozgur"}}</div>';
-        var view = new salt.view.View(text);
+        var view = new salt.View(text);
         deepEqual(view.template.text, text);
         deepEqual(salt.isEmpty(view.template.params), false);
     });
 
     test("View object gets the given source from salt attribute", function() {
         var text = '<div salt="source:25">some element</div>';
-        var view = new salt.view.View(text);
+        var view = new salt.View(text);
         deepEqual(view.source, 25);
     });
 
     test("View refreshes it's body evaluating the template", function() {
         var text = '<div salt="source:25" foo="{{3}}">some element {{record}}</div>';
-        var view = new salt.view.View(text);
+        var view = new salt.View(text);
         deepEqual(view.element.outerHTML, '<div foo="3">some element 25</div>');
     });
 
@@ -153,7 +153,7 @@ require(['salt.view'], function(salt, undefined) {
 
     test("View uses config for start and end identifier if given", function() {
         var text = '<div salt="source:25;start:-_;end:_-" foo="-_3_-">some element -_record_-</div>';
-        var view = new salt.view.View(text);
+        var view = new salt.View(text);
         deepEqual(view.element.outerHTML, '<div foo="3">some element 25</div>');
     });
 
