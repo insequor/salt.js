@@ -53,21 +53,21 @@ require(['salt.view'], function(salt, undefined) {
     });
 
     test("template replaces keys with params", function() {
-        var text = 'this is some text with key {5} which should evaluate to 5 ';
+        var text = 'this is some text with key {{5}} which should evaluate to 5 ';
         var tmpl = salt.view.template(text);
         equal(tmpl.text, text);
-        notEqual(tmpl.params['{5}'], undefined);
+        notEqual(tmpl.params['{{5}}'], undefined);
     });
 
     test("template ignores the start without end", function() {
-        var text = 'text with {key without end';
+        var text = 'text with {{key without end';
         var tmpl = salt.view.template(text);
         equal(tmpl.text, text);
         deepEqual(tmpl.params, {});
     });
 
     test("template ignores the end without start", function() {
-        var text = 'text with }key without start';
+        var text = 'text with }}key without start';
         var tmpl = salt.view.template(text);
         equal(tmpl.text, text);
         deepEqual(tmpl.params, {});
@@ -84,28 +84,28 @@ require(['salt.view'], function(salt, undefined) {
 
     //evaluate
     test("evaluate replaces constant values", function() {
-        var tmpl = salt.view.template('test {5} five');
+        var tmpl = salt.view.template('test {{5}} five');
         var text = salt.view.evaluate(tmpl);
         equal(text, 'test 5 five');
     });
 
     test("evaluate replaces values from record", function() {
         var me = { name: 'ozgur', age: 35 };
-        var tmpl = salt.view.template('hey, {record.name} was here');
+        var tmpl = salt.view.template('hey, {{record.name}} was here');
         var text = salt.view.evaluate(tmpl, me);
         equal(text, 'hey, ozgur was here');
     });
 
     test("evaluate replaces method calls from record", function() {
         var me = { name: function() { return 'ozgur'; }, age: 35 };
-        var tmpl = salt.view.template('hey, {record.name()} was here');
+        var tmpl = salt.view.template('hey, {{record.name()}} was here');
         var text = salt.view.evaluate(tmpl, me);
         equal(text, 'hey, ozgur was here');
     });
 
     test("evaluate replaces method calls with parameters from record", function() {
         var me = { name: function(a) { return 'ozgur' + a; }, age: 35 };
-        var tmpl = salt.view.template('hey, {record.name(" was")} here');
+        var tmpl = salt.view.template('hey, {{record.name(" was")}} here');
         var text = salt.view.evaluate(tmpl, me);
         equal(text, 'hey, ozgur was here');
     });
@@ -127,7 +127,7 @@ require(['salt.view'], function(salt, undefined) {
     });
 
     test("View object constructs the template if there is at least one template value", function() {
-        var text = '<div>Name = {"ozgur"}</div>';
+        var text = '<div>Name = {{"ozgur"}}</div>';
         var view = new salt.view.View(text);
         deepEqual(view.template.text, text);
         deepEqual(salt.isEmpty(view.template.params), false);
@@ -136,14 +136,13 @@ require(['salt.view'], function(salt, undefined) {
     test("View object gets the given source from salt attribute", function() {
         var text = '<div salt="source:25">some element</div>';
         var view = new salt.view.View(text);
-        deepEqual(view.element.outerHTML, text);
         deepEqual(view.source, 25);
     });
 
     test("View refreshes it's body evaluating the template", function() {
-        var text = '<div salt="source:25" foo="{3}">some element {record}</div>';
+        var text = '<div salt="source:25" foo="{{3}}">some element {{record}}</div>';
         var view = new salt.view.View(text);
-        deepEqual(view.element.outerHTML, '<div salt="source:25" foo="3">some element 25</div>');
+        deepEqual(view.element.outerHTML, '<div foo="3">some element 25</div>');
     });
 
     //TODO: Test the case where there are two cild nodes under one parent which uses source from
@@ -152,6 +151,13 @@ require(['salt.view'], function(salt, undefined) {
     //and either allow update of attributes or support re-creating child nodes.
 
 
+    test("View uses config for start and end identifier if given", function() {
+        var text = '<div salt="source:25;start:-_;end:_-" foo="-_3_-">some element -_record_-</div>';
+        var view = new salt.view.View(text);
+        deepEqual(view.element.outerHTML, '<div foo="3">some element 25</div>');
+    });
+
+    
 
 
 

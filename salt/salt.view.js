@@ -47,9 +47,21 @@ define(['salt.base', 'salt.event', 'salt.model'], function(salt) {
 
     //
     //This is adapted from: http://stackoverflow.com/questions/3354224/javascript-regex-how-to-get-text-between-curly-
+    //use double length characters for start and end to avoid limiting usage of certain characters in the text
+    //for example using { will limit the user but having {{ is better. You can even use __ for both start and end
+    //which results __key__ like usage which might be easier to read
     function getTemplateParameters(template, start, end) {
+        if (!start)
+            start = '{{';
+        if (!end)
+            end = '}}';
+
         var results = {}
-        var restr = String.format('/{0}([^{1}]+)}/g', start, end);
+
+        //TODO: This requler expression is simple looking but I don't really get it, we repeat the
+        //end identifier in the middle to make sure that it will stop matching as soon as it finds the
+        //end identifier.
+        var restr = String.format('/{0}([^{1}]+){1}/g', start, end);
         var re = eval(restr); //   /{([^}]+)}/g;
         var text;
         while (text = re.exec(template)) {
@@ -90,10 +102,10 @@ define(['salt.base', 'salt.event', 'salt.model'], function(salt) {
         }
 
         //TODO: This method uses fixed start and end identifiers as { and } 
-        //It does not support character escaping like use {{ to mean { 
-        , template: function(text) {
+        //It does not support character escaping like use {{ to mean {
+        , template: function(text, start, end) {
             var tmpl = { id: undefined, text: text, params: {} };
-            tmpl.params = getTemplateParameters(text, '{', '}');
+            tmpl.params = getTemplateParameters(text, start, end);
             return tmpl;
         }
 
@@ -133,15 +145,22 @@ define(['salt.base', 'salt.event', 'salt.model'], function(salt) {
     *
     */
     salt.view.View = function(element) {
+
         element = $(element);
+
+        this.config = salt.view.config(element.attr('salt'));
+        //as soon as we have the attribute we can remove it from the element
+        //this is mainly required if we have start and end identifiers defined
+        //in the config. It sees them as keywords and tries to replace.
+        element.removeAttr('salt');
+        
         this.element = element[0];
         if (this.element) {
-            var tmpl = salt.view.template(this.element.outerHTML);
+            var tmpl = salt.view.template(this.element.outerHTML, this.config.start, this.config.end);
             if (!salt.isEmpty(tmpl.params))
                 this.template = tmpl;
         }
 
-        this.config = salt.view.config(element.attr('salt'));
         if ('source' in this.config)
             this.source = eval(this.config.source);
 
