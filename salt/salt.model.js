@@ -2,7 +2,7 @@
 Ozgur Yuksel, July, 2012
     
 */
-define(['salt.base', 'salt.event'], function(salt) {
+define(['salt/salt.base', 'salt/salt.event'], function(salt) {
     salt.model = {
         //update the source object with the values from target object
         //call is not propagated, values are simply copied. 

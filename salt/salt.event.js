@@ -4,7 +4,7 @@ Ozgur Yuksel, July, 2012
 */
 
 
-define(['salt.base', 'salt.model'], function(salt) {
+define(['salt/salt.base', 'salt/salt.model'], function(salt) {
     salt.event = {
         /*params is a dictionaty object which contains:
         source: source object which will trigger the event

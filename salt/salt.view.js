@@ -2,7 +2,7 @@
 Ozgur Yuksel, July, 2012
     
 */
-define(['salt.base', 'salt.event', 'salt.model'], function(salt) {
+define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) {
     //Find all elements which has an attribute named ml, it goes down in the tree
     //but stops once it finds an ml attribute. This way children of each found element 
     //is handled when their parent gets a viewer

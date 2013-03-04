@@ -5,6 +5,6 @@ salt is a simple template framework based on html elements and adding them dynam
 It is developed based on ideas from Florin Dinu
 */
 
-define(['salt.base', 'salt.event', 'salt.model', 'salt.view'], function(salt) {
+define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model', 'salt/salt.view'], function(salt) {
     return salt;
 });
