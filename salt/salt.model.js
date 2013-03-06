@@ -82,6 +82,7 @@ define(['salt/salt.base', 'salt/salt.event'], function(salt) {
             item.bind({ event: 'changed', method: this.saltItemChangedHandler });
         }
         this.trigger('added', item);
+        this.trigger('changed', this);
     }
 
     salt.Array.prototype.remove = function(item) {
@@ -95,11 +96,17 @@ define(['salt/salt.base', 'salt/salt.event'], function(salt) {
     salt.Array.prototype.bind = function(params) {
         params.source = this;
         salt.event.bind(params);
-        if (params.trigger && params.event == 'added') {
-            var method = params.method;
-            for (var idx = 0; idx < this.length; idx++)
-                method(this[idx]);
+        if (params.trigger)
+        {   if(params.event == 'added') {
+                var method = params.method;
+                for (var idx = 0; idx < this.length; idx++)
+                    method(this[idx]);
+            }
+            else if(params.event == 'changed'){
+                params.method(this);
+            }
         }
+        
     }
 
     salt.Array.prototype.unbind = function(event, method) {
