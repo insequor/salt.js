@@ -75,7 +75,29 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
     }
 
 
+    salt.initialize_view = function(document){
+        $.each(salt.view.saltyElements(document), function(idx, element) {
+            salt.create_view(element);
+        });
+    };
+    
+    salt.create_view = function(element, source){
+        var config = salt.view.config(element.attr('salt'));
+        var view = 'View';
+        if('view' in config)
+            view = config['view'];
+        
+        //TODO: Check and use ContainerView for container type object, i.e. provide length...
+        
+        view = salt.views[view];
+        
+        view = new view();
+        view.init(element, config, source);
+        return view;
+    }
+    
 
+    
     salt.view = {
         //return a list of elements which has the salt attribute in them
         //this list contains only the top level elements starting from the given parent
@@ -108,6 +130,22 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
             tmpl.params = getTemplateParameters(text, start, end);
             return tmpl;
         }
+        
+        //return a list of templates each created for one child of the given parent element
+        , templates: function(parent, start, end) {
+            var templates = {};
+            $.each($(parent).children(), function(idx, element) {
+                var tmpl = salt.view.template(element.outerHTML, start, end);
+                //We register first found template as the default one so it will be used
+                //if config does not contain a template value
+                if(!templates[undefined])
+                    templates[undefined] = tmpl;
+                templates[tmpl.id] = tmpl;
+            });
+            return templates;
+            
+        }
+        
 
         , evaluate: function(template, record) {
             var text = template.text;
@@ -144,11 +182,17 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
     point
     *
     */
-    salt.View = function(element) {
-
+    salt.View = function() {};
+    
+    salt.View.prototype.init = function(element, config, source){
+        if(!element || !config)
+            return;
+            
+        var _this = this;
+        
         element = $(element);
 
-        this.config = salt.view.config(element.attr('salt'));
+        this.config = config;
         //as soon as we have the attribute we can remove it from the element
         //this is mainly required if we have start and end identifiers defined
         //in the config. It sees them as keywords and tries to replace.
@@ -160,10 +204,28 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
             if (!salt.isEmpty(tmpl.params))
                 this.template = tmpl;
         }
-
+        
         if ('source' in this.config)
             this.source = eval(this.config.source);
+        else
+            this.source = source;
+        
+        if (this.source){
+            if(this.source.bind) {
+                this.source.bind({
+                    event: 'changed'
+                    , method: function(val) {_this.render();} 
+                    , trigger: false
+                });
+            }    
+        }
+        this.render();
+        
+        
+    
+    };
 
+    salt.View.prototype.render = function (){
         if (this.template && this.element) {
             var temp = salt.view.evaluate(this.template, this.source);
             temp = $(temp);
@@ -181,8 +243,81 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
             temp.remove();
         }
     };
-
-
-
+    
+    salt.ListView = function(){}
+    salt.inherit(salt.ListView, salt.View);
+    
+    //List view does not render to keep the content coming from array elements, they are handled
+    // thrhough push and remove handlers
+    salt.ListView.prototype.render = function (){};
+    
+    
+    salt.ListView.prototype.init = function(element, config, source){
+        salt.View.prototype.init.call(this, element, config, source);
+        
+        var _this = this;
+        
+        if('filter' in config)
+            this.filter = eval(config.filter);
+            
+        this.templates = salt.view.templates(element, config.start, config.end);
+        
+        //We are done with the template processing so we can get rid of them
+        //We will populate our own list. This would create trouble if we want to 
+        //have static elements (not per record) but that's not the case at the moment
+        $(element).html('');
+        
+        if (this.source){
+            if(this.source.bind) {
+                this.source.bind({
+                    event: 'added'
+                    , method: function(val) {_this.push_handler(val);} 
+                    , trigger: true
+                });
+            }
+            else 
+                this.render();
+        }
+    }
+    
+    salt.ListView.prototype.push_handler = function(record) {
+        if(this.filter && !this.filter(record))
+            return;
+            
+        //var newElement = $(evaluateTemplate(template.html, template.params, item));
+        //We do not evaluate the template since the create Pane will do it and it will also 
+        //keep a reference to the tenplate and it needs the parametric version
+        //TODO: Support selecting a template based on record
+        //var template = _this.template(item);
+        var template = this.templates[undefined];
+        var newElement = $(template.text);
+        $(this.element).append(newElement);
+        
+        if (newElement.attr('salt'))
+            salt.create_view(newElement, record);
+        else {
+            //TODO: ?
+            //$.each(mlElements(newElement), function(childIdx, child) {
+            //    createViewer(child, item);
+            //});
+        }
+    
+    }
+    
+    salt.ListView.prototype.remove_handler = function(record) {
+    }
+    
+    
+    
+    //this is the list of views added by the extensions. Normally we use evaluate call but with the 
+    //requirejs usage I am not sure how we can make those names available everywhere... With this way 
+    //user can also override the default views
+    salt.views = {
+        'View': salt.View
+        , 'ListView': salt.ListView
+    };
+    
+    
+    
     return salt;
 });
