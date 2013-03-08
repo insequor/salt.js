@@ -37,13 +37,16 @@ define(['salt/salt.base', 'salt/salt.model'], function(salt) {
         }
 
         , trigger: function(src, event, data) {
-            try {
+            try 
+            {
                 $.each(src.salt.listeners[event], function(idx, method) {
                     method(data);
                 });
             }
             catch (e) {
+                //console.log(e);
             }
+                
         }
     };
 

@@ -123,11 +123,30 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
             return config;
         }
 
+        , cached_templates : {}
+        
         //TODO: This method uses fixed start and end identifiers as { and } 
         //It does not support character escaping like use {{ to mean {
-        , template: function(text, start, end) {
-            var tmpl = { id: undefined, text: text, params: {} };
-            tmpl.params = getTemplateParameters(text, start, end);
+        , template: function(element, start, end) {
+            var tmpl = {id: element.id, text: element.outerHTML, params: {} };
+            tmpl.params = getTemplateParameters(tmpl.text, start, end);
+            if(tmpl.id)
+            {
+                salt.view.cached_templates[tmpl.id] = tmpl;
+            }
+            else {
+                var config = salt.view.config($(element).attr('salt'));
+                if(config && 'ref' in config)
+                {
+                    try {
+                        tmpl = salt.view.cached_templates[config.ref];
+                    }
+                    catch(e){
+                    }
+                    if(!tmpl)
+                        console.log('Could not find the cached template: "' + config.ref + '" it is possible that it is not available yet');
+                }
+            }
             return tmpl;
         }
         
@@ -135,7 +154,7 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
         , templates: function(parent, start, end) {
             var templates = {};
             $.each($(parent).children(), function(idx, element) {
-                var tmpl = salt.view.template(element.outerHTML, start, end);
+                var tmpl = salt.view.template(element, start, end);
                 //We register first found template as the default one so it will be used
                 //if config does not contain a template value
                 if(!templates[undefined])
@@ -200,7 +219,7 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
         
         this.element = element[0];
         if (this.element) {
-            var tmpl = salt.view.template(this.element.outerHTML, this.config.start, this.config.end);
+            var tmpl = salt.view.template(this.element, this.config.start, this.config.end);
             if (!salt.isEmpty(tmpl.params))
                 this.template = tmpl;
         }
