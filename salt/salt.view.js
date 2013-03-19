@@ -68,7 +68,7 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
             var param = start + text[1] + end;
             if (results[param])
                 continue;
-            var func = new Function('record', String.format('return {0};', text[1]));
+            var func = new Function('record', 'view', String.format('return {0};', text[1]));
             results[param] = func;
         }
         return results;
@@ -83,12 +83,40 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
     
     salt.create_view = function(element, source){
         var config = salt.view.config(element.attr('salt'));
+        
+        
+        if('ref' in config)
+        {
+            //In case of referenced view we copy the given config on top of the referenced config. This 
+            //way view can override some configuration which was given in template. It is useful if you
+            //want to use the same view with different data sources for example
+            try {
+                var tmpl = salt.view.cached_templates[config.ref];
+                
+                var newElement = $(tmpl.text);
+                newElement.insertAfter(element);
+                element.remove();
+                element = newElement;
+                element.id = undefined;
+                
+                var templateConfig = salt.view.config(element.attr('salt'));
+                for(var key in config)
+                    templateConfig[key] = config[key];
+                
+                config = templateConfig;
+            }
+            catch(e){
+                console.log(e);
+            };
+        }
+        
         var view = 'View';
         if('view' in config)
             view = config['view'];
         
-        //TODO: Check and use ContainerView for container type object, i.e. provide length...
-        
+        if ((!source) && ('source' in config))
+            source = eval(config.source);
+            
         view = salt.views[view];
         
         view = new view();
@@ -142,11 +170,13 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
                         tmpl = salt.view.cached_templates[config.ref];
                     }
                     catch(e){
+                        console.log(e);
                     }
                     if(!tmpl)
                         console.log('Could not find the cached template: "' + config.ref + '" it is possible that it is not available yet');
                 }
             }
+            
             return tmpl;
         }
         
@@ -166,15 +196,16 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
         }
         
 
-        , evaluate: function(template, record) {
+        , evaluate: function(template, record, view) {
             var text = template.text;
             $.each(template.params, function(key, val) {
                 try {
-                    text = text.replaceAll(key, val(record));
+                    text = text.replaceAll(key, val(record, view));
                 }
                 catch (err) {
                     console.log('Exception caught while evaluating: ' + key);
                     console.log(record);
+                    console.log(view);
                     console.log(err);
                 }
             });
@@ -215,7 +246,7 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
         //as soon as we have the attribute we can remove it from the element
         //this is mainly required if we have start and end identifiers defined
         //in the config. It sees them as keywords and tries to replace.
-        element.removeAttr('salt');
+        //element.removeAttr('salt');
         
         this.element = element[0];
         if (this.element) {
@@ -224,10 +255,7 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
                 this.template = tmpl;
         }
         
-        if ('source' in this.config)
-            this.source = eval(this.config.source);
-        else
-            this.source = source;
+        this.source = source;
         
         if (this.source){
             if(this.source.bind) {
@@ -246,7 +274,7 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
 
     salt.View.prototype.render = function (){
         if (this.template && this.element) {
-            var temp = salt.view.evaluate(this.template, this.source);
+            var temp = salt.view.evaluate(this.template, this.source, this);
             temp = $(temp);
             var thisElement = $(this.element);
             thisElement.html(temp.html());
@@ -320,7 +348,6 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
             //    createViewer(child, item);
             //});
         }
-    
     }
     
     salt.ListView.prototype.remove_handler = function(record) {
