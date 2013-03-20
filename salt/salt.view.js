@@ -249,6 +249,10 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
         //element.removeAttr('salt');
         
         this.element = element[0];
+        
+        //TODO: This is probably not a very good idea'
+        this.element._salt_view = this;
+        
         if (this.element) {
             var tmpl = salt.view.template(this.element, this.config.start, this.config.end);
             if (!salt.isEmpty(tmpl.params))
@@ -321,6 +325,11 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
                     , method: function(val) {_this.push_handler(val);} 
                     , trigger: true
                 });
+                this.source.bind({
+                    event: 'removed'
+                    , method: function(val) {_this.remove_handler(val);} 
+                    , trigger: true
+                });
             }
             else 
                 this.render();
@@ -351,6 +360,15 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
     }
     
     salt.ListView.prototype.remove_handler = function(record) {
+        //TODO: WE should make sure that bindings are removed properly
+        //And there should be a better way of finding the view directly 
+        //without looping all, but I don't want to modify the record...
+        $.each($(this.element).children(), function(idx, child) {
+            var view = child._salt_view;
+            if(view && view.source == record)
+                $(child).remove();
+        });
+        
     }
     
     
