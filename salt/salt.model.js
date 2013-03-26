@@ -29,10 +29,11 @@ define(['salt/salt.base', 'salt/salt.event'], function(salt) {
         //http://ejohn.org/blog/javascript-array-remove/
         //TODO: A version of remove should be provided for dictionary objects to remove
         //the key value pairs from
+        //returns true if item is actually removed, otherwise false
         , remove: function(source, item) {
             var from = source.indexOf(item);
             if (from < 0)
-                return [false, false];
+                return false;
             var to = from; //only one element will be removed
             var rest = source.slice((to || from) + 1 || source.length);
             source.length = from; //cuts the rest of the element
@@ -42,7 +43,7 @@ define(['salt/salt.base', 'salt/salt.event'], function(salt) {
                 for(var idx in rest)
                     source.push.call(source, rest[idx], true); //and insterts it back
             }
-            return [true, true];
+            return true;
         }
     };
 
@@ -101,8 +102,11 @@ define(['salt/salt.base', 'salt/salt.event'], function(salt) {
         var res = salt.model.remove(this, item);
         if (item.bind)
             item.unbind('changed', this.saltItemChangedHandler);
-        if (res[0])
+        if (res)
+        {
             this.trigger('removed', item);
+            this.trigger('changed', this);
+        }
     }
 
     salt.Array.prototype.bind = function(params) {
