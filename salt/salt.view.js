@@ -74,53 +74,27 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
         return results;
     }
 
-
     salt.initialize_view = function(document){
         $.each(salt.view.saltyElements(document), function(idx, element) {
             salt.create_view(element);
         });
     };
     
-    salt.create_view = function(element, source){
-        var config = salt.view.config(element.attr('salt'));
-        
-        
-        if('ref' in config)
-        {
-            //In case of referenced view we copy the given config on top of the referenced config. This 
-            //way view can override some configuration which was given in template. It is useful if you
-            //want to use the same view with different data sources for example
-            try {
-                var tmpl = salt.view.cached_templates[config.ref];
-                
-                var newElement = $(tmpl.text);
-                newElement.insertAfter(element);
-                element.remove();
-                element = newElement;
-                element.id = undefined;
-                
-                var templateConfig = salt.view.config(element.attr('salt'));
-                for(var key in config)
-                    templateConfig[key] = config[key];
-                
-                config = templateConfig;
-            }
-            catch(e){
-                console.log(e);
-            };
-        }
-        
+    salt.create_view = function(element, tmpl, source){
+        if(!tmpl)
+            tmpl = salt.view.template(element); //we don't pass the start and end parameters, it uses the defaults here
+                                                //so it should be part of salt attribute if needs to be given
         var view = 'View';
-        if('view' in config)
-            view = config['view'];
+        if('view' in tmpl.config)
+            view = tmpl.config['view'];
         
-        if ((!source) && ('source' in config))
-            source = eval(config.source);
+        if ((!source) && ('source' in tmpl.config))
+            source = eval(tmpl.config.source);
             
         view = salt.views[view];
         
         view = new view();
-        view.init(element, config, source);
+        view.init(element, tmpl, source);
         return view;
     }
     
@@ -153,30 +127,58 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
 
         , cached_templates : {}
         
+        , cached_template: function(config) {
+            if(! ('ref' in config))
+                return;
+            
+            //In case of referenced view we copy the given config on top of the referenced config. This 
+            //way view can override some configuration which was given in template. It is useful if you
+            //want to use the same view with different data sources for example
+            try {
+                var tmpl = salt.view.cached_templates[config.ref];
+                var newTmpl = {id: undefined, text: tmpl.text, params: tmpl.params, config: {} };
+                //First get all config from template and override it with the given config
+                for(var key in tmpl.config)
+                    newTmpl.config[key] = tmpl.config[key];
+                
+                for(var key in config)
+                    newTmpl.config[key] = config[key];
+                
+                return newTmpl;
+            }
+            catch(e){
+                console.log(e);
+                return;
+            };
+        }
+        
         //TODO: This method uses fixed start and end identifiers as { and } 
         //It does not support character escaping like use {{ to mean {
         , template: function(element, start, end) {
-            var tmpl = {id: element.id, text: element.outerHTML, params: {} };
-            tmpl.params = getTemplateParameters(tmpl.text, start, end);
-            if(tmpl.id)
-            {
-                salt.view.cached_templates[tmpl.id] = tmpl;
+            element = $(element);
+            var el = $(element)[0];
+            var tmpl = {id: el.id, text: el.outerHTML, params: {}, config: {} };
+            tmpl.config = salt.view.config(element.attr('salt'));
+            //TODO: It is not decided yet if we should be able to override the parameters from template
+            //like we do it for the config
+            if(tmpl.config && 'ref' in tmpl.config){
+                newTmpl = salt.view.cached_template(tmpl.config);
+                if(!newTmpl)
+                    console.log('Could not find the cached template: "' + tmpl.config.ref + '" it is possible that it is not available yet');
+                else 
+                    newTmpl.id = el.id;
+                tmpl = newTmpl;
             }
             else {
-                var config = salt.view.config($(element).attr('salt'));
-                if(config && 'ref' in config)
-                {
-                    try {
-                        tmpl = salt.view.cached_templates[config.ref];
-                    }
-                    catch(e){
-                        console.log(e);
-                    }
-                    if(!tmpl)
-                        console.log('Could not find the cached template: "' + config.ref + '" it is possible that it is not available yet');
-                }
+                if (!start && 'start' in tmpl.config)
+                    start = tmpl.config.start;
+                if(!end && 'end' in tmpl.config)
+                    end = tmpl.config.end;
+                tmpl.params = getTemplateParameters(tmpl.text, start, end);
             }
             
+            if(tmpl && tmpl.id)
+                salt.view.cached_templates[tmpl.id] = tmpl;
             return tmpl;
         }
         
@@ -185,6 +187,8 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
             var templates = {};
             $.each($(parent).children(), function(idx, element) {
                 var tmpl = salt.view.template(element, start, end);
+                if(!tmpl)
+                    return;
                 //We register first found template as the default one so it will be used
                 //if config does not contain a template value
                 if(!templates[undefined])
@@ -234,15 +238,16 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
     */
     salt.View = function() {};
     
-    salt.View.prototype.init = function(element, config, source){
-        if(!element || !config)
+    salt.View.prototype.init = function(element, tmpl, source){
+        if(!element || !tmpl)
             return;
             
-        var _this = this;
+        this.template = tmpl;
+        this.config = tmpl.config;
+        this.source = source;
         
         element = $(element);
-
-        this.config = config;
+        
         //as soon as we have the attribute we can remove it from the element
         //this is mainly required if we have start and end identifiers defined
         //in the config. It sees them as keywords and tries to replace.
@@ -253,27 +258,17 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
         //TODO: This is probably not a very good idea'
         this.element._salt_view = this;
         
-        if (this.element) {
-            var tmpl = salt.view.template(this.element, this.config.start, this.config.end);
-            if (!salt.isEmpty(tmpl.params))
-                this.template = tmpl;
-        }
-        
-        this.source = source;
-        
+        var view = this;
         if (this.source){
             if(this.source.bind) {
                 this.source.bind({
                     event: 'changed'
-                    , method: function(val) {_this.render();} 
+                    , method: function(val) {view.render();} 
                     , trigger: false
                 });
             }    
         }
         this.render();
-        
-        
-    
     };
 
     salt.View.prototype.render = function (){
@@ -303,31 +298,30 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
     salt.ListView.prototype.render = function (){};
     
     
-    salt.ListView.prototype.init = function(element, config, source){
-        salt.View.prototype.init.call(this, element, config, source);
+    salt.ListView.prototype.init = function(element, tmpl, source){
+        salt.View.prototype.init.call(this, element, tmpl, source);
         
-        var _this = this;
-        
-        if('filter' in config)
-            this.filter = eval(config.filter);
+        if('filter' in this.config)
+            this.filter = eval(this.config.filter);
             
-        this.templates = salt.view.templates(element, config.start, config.end);
+        this.templates = salt.view.templates(element, this.config.start, this.config.end);
         
         //We are done with the template processing so we can get rid of them
         //We will populate our own list. This would create trouble if we want to 
         //have static elements (not per record) but that's not the case at the moment
         $(element).html('');
         
+        var view = this;
         if (this.source){
             if(this.source.bind) {
                 this.source.bind({
                     event: 'added'
-                    , method: function(val) {_this.push_handler(val);} 
+                    , method: function(val) {view.push_handler(val);} 
                     , trigger: true
                 });
                 this.source.bind({
                     event: 'removed'
-                    , method: function(val) {_this.remove_handler(val);} 
+                    , method: function(val) {view.remove_handler(val);} 
                     , trigger: true
                 });
             }
@@ -345,12 +339,12 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
         //keep a reference to the tenplate and it needs the parametric version
         //TODO: Support selecting a template based on record
         //var template = _this.template(item);
-        var template = this.templates[undefined];
-        var newElement = $(template.text);
+        var tmpl = this.templates[undefined];
+        var newElement = $(tmpl.text);
         $(this.element).append(newElement);
         
         if (newElement.attr('salt'))
-            salt.create_view(newElement, record);
+            salt.create_view(newElement, tmpl, record);
         else {
             //TODO: ?
             //$.each(mlElements(newElement), function(childIdx, child) {
