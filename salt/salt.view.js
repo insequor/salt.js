@@ -304,6 +304,9 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
         if('filter' in this.config)
             this.filter = eval(this.config.filter);
             
+        if('template' in this.config)
+            this.templateFunction = eval(this.config.template);
+            
         this.templates = salt.view.templates(element, this.config.start, this.config.end);
         
         //We are done with the template processing so we can get rid of them
@@ -339,7 +342,11 @@ define(['salt/salt.base', 'salt/salt.event', 'salt/salt.model'], function(salt) 
         //keep a reference to the tenplate and it needs the parametric version
         //TODO: Support selecting a template based on record
         //var template = _this.template(item);
-        var tmpl = this.templates[undefined];
+        var tmplId = undefined;
+        if(this.templateFunction)
+            tmplId = this.templateFunction(record);
+            
+        var tmpl = this.templates[tmplId];
         var newElement = $(tmpl.text);
         $(this.element).append(newElement);
         
